@@ -1,41 +1,85 @@
-import streamlit as st
-from sklearn.datasets import load_iris
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-
-# Load data
-iris = load_iris()
-X = iris.data
-y = iris.target
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Train model
-clf = RandomForestClassifier()
-clf.fit(X_train, y_train)
-
-# Predict and evaluate
-y_pred = clf.predict(X_test)
-acc = accuracy_score(y_test, y_pred)
-
-# Streamlit UI
-st.title("Iris Flower Classification with Random Forest")
-st.write("This app uses the Iris dataset and a Random Forest classifier.")
-
-st.write(f"### Model Accuracy: {acc:.2f}")
-
-# User input
-st.sidebar.header("Input Flower Measurements")
-sepal_length = st.sidebar.slider("Sepal Length", float(X[:,0].min()), float(X[:,0].max()))
-sepal_width = st.sidebar.slider("Sepal Width", float(X[:,1].min()), float(X[:,1].max()))
-petal_length = st.sidebar.slider("Petal Length", float(X[:,2].min()), float(X[:,2].max()))
-petal_width = st.sidebar.slider("Petal Width", float(X[:,3].min()), float(X[:,3].max()))
-
-# Prediction
-input_data = [[sepal_length, sepal_width, petal_length, petal_width]]
-prediction = clf.predict(input_data)
-predicted_class = iris.target_names[prediction[0]]
-
-st.write(f"### Predicted Iris Class: **{predicted_class}**")
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "id": "93a0dae3-aafa-463e-ab8a-57efd450b800",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import streamlit as st\n",
+    "import pandas as pd\n",
+    "import re\n",
+    "from sklearn.ensemble import IsolationForest\n",
+    "\n",
+    "st.title(\"🔍 AI-Enhanced Data Accuracy in CRM Systems\")\n",
+    "\n",
+    "st.markdown(\"Upload a CRM CSV file and this app will flag anomalies in email and phone data using AI-enhanced techniques.\")\n",
+    "\n",
+    "uploaded_file = st.file_uploader(\"Upload CRM Data (CSV)\", type=\"csv\")\n",
+    "\n",
+    "def is_valid_email(email):\n",
+    "    return re.match(r\"[^@]+@[^@]+\\.[^@]+\", str(email))\n",
+    "\n",
+    "def is_valid_phone(phone):\n",
+    "    return re.match(r\"^\\+?\\d{7,15}$\", str(phone))\n",
+    "\n",
+    "if uploaded_file is not None:\n",
+    "    df = pd.read_csv(uploaded_file)\n",
+    "    st.subheader(\"📋 Original Data\")\n",
+    "    st.dataframe(df)\n",
+    "\n",
+    "    # Basic Rule-based validation\n",
+    "    df[\"Email_Valid\"] = df[\"Email\"].apply(is_valid_email)\n",
+    "    df[\"Phone_Valid\"] = df[\"Phone\"].apply(is_valid_phone)\n",
+    "\n",
+    "    # AI-based anomaly detection using Isolation Forest\n",
+    "    features = df.select_dtypes(include=['float64', 'int64']).fillna(0)\n",
+    "    if not features.empty:\n",
+    "        model = IsolationForest(contamination=0.1)\n",
+    "        df[\"Anomaly\"] = model.fit_predict(features)\n",
+    "        df[\"Anomaly\"] = df[\"Anomaly\"].map({1: \"Normal\", -1: \"Anomaly\"})\n",
+    "    else:\n",
+    "        df[\"Anomaly\"] = \"N/A (no numeric features)\"\n",
+    "\n",
+    "    st.subheader(\"✅ Cleaned & Analyzed Data\")\n",
+    "    st.dataframe(df)\n",
+    "\n",
+    "    csv = df.to_csv(index=False).encode(\"utf-8\")\n",
+    "    st.download_button(\"Download Processed CSV\", csv, \"cleaned_crm_data.csv\", \"text/csv\")\n",
+    "else:\n",
+    "    st.info(\"Please upload a CSV file with CRM data. Required columns: `Email`, `Phone`, plus optional numeric fields.\")\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "71999040-88b7-4cab-b5f2-6584026cd82e",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
