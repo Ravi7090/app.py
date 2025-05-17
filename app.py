@@ -1,54 +1,41 @@
-import pandas as pd
+import streamlit as st
+from sklearn.datasets import load_iris
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import joblib
+from sklearn.metrics import accuracy_score
 
-def clean_data(df):
-    # Remove leading/trailing whitespace
-    df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
+# Load data
+iris = load_iris()
+X = iris.data
+y = iris.target
 
-    # Drop duplicate rows (exact duplicates)
-    df = df.drop_duplicates()
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Impute missing values
-    imputer = SimpleImputer(strategy='most_frequent')
-    df_imputed = pd.DataFrame(imputer.fit_transform(df), columns=df.columns)
+# Train model
+clf = RandomForestClassifier()
+clf.fit(X_train, y_train)
 
-    return df_imputed
+# Predict and evaluate
+y_pred = clf.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
 
-def detect_invalid_entries(df, label_column='is_valid'):
-    if label_column not in df.columns:
-        raise ValueError("Label column missing for supervised learning.")
+# Streamlit UI
+st.title("Iris Flower Classification with Random Forest")
+st.write("This app uses the Iris dataset and a Random Forest classifier.")
 
-    X = df.drop(label_column, axis=1)
-    y = df[label_column]
+st.write(f"### Model Accuracy: {acc:.2f}")
 
-    # Convert categorical variables
-    X = pd.get_dummies(X)
+# User input
+st.sidebar.header("Input Flower Measurements")
+sepal_length = st.sidebar.slider("Sepal Length", float(X[:,0].min()), float(X[:,0].max()))
+sepal_width = st.sidebar.slider("Sepal Width", float(X[:,1].min()), float(X[:,1].max()))
+petal_length = st.sidebar.slider("Petal Length", float(X[:,2].min()), float(X[:,2].max()))
+petal_width = st.sidebar.slider("Petal Width", float(X[:,3].min()), float(X[:,3].max()))
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+# Prediction
+input_data = [[sepal_length, sepal_width, petal_length, petal_width]]
+prediction = clf.predict(input_data)
+predicted_class = iris.target_names[prediction[0]]
 
-    clf = RandomForestClassifier()
-    clf.fit(X_train, y_train)
-
-    predictions = clf.predict(X_test)
-    score = clf.score(X_test, y_test)
-
-    return score, predictions
-
-def detect_duplicates(df):
-    # Convert categorical to numeric
-    df_encoded = pd.get_dummies(df.select_dtypes(include=['object', 'category']))
-
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(df_encoded)
-
-    clustering = DBSCAN(eps=0.5, min_samples=2)
-    labels = clustering.fit_predict(X_scaled)
-
-    df['Duplicate_Group'] = labels
-    return df[df['Duplicate_Group'] != -1]  # -1 is noise (non-duplicate)
-
+st.write(f"### Predicted Iris Class: **{predicted_class}**")
